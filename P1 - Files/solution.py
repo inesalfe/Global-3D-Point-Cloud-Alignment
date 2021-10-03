@@ -96,19 +96,19 @@ class point_cloud_data_iasd(point_cloud_data):
         try:
             with open(file) as fd:
                 lines = fd.readlines()
-                st, n_pts = 0, 0
-                xyz = []
+                st, n_pts, xyz = 0, 0, []
                 for line in lines:
                     st += 1
                     l = line.strip().split()
-                    if l[0] == "element":
-                        if l[1] == "vertex":
+                    if (l[0], l[1]) == ("element", "vertex"):
                             n_pts = int(l[-1])
-                    elif l[0] == 'property':
-                        if l[1] in ('float', 'int'):
+                    elif (l[0],l[1]) == ('property', 'float'):
+                        if l[2] in ('x', 'y', 'z'):
                             xyz.append(l[2])                        
                     elif l[0] == 'end_header':
                         break
+                if(len(xyz) != 3 or len(lines[st:]) != n_pts): #Not enough coordinates or wrong number of vertices
+                    raise ValueError("Wrong information")
                 self.data = {i: np.array([l.split()[coord[c]] for c in xyz], dtype=float) for i, l in enumerate(lines[st:st+n_pts]) }
         except Exception as e:
             print(e)
