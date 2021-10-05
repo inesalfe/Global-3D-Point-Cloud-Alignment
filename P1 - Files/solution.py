@@ -29,6 +29,7 @@ class registration_iasd(registration):
 		S1 = [correspondences[i]['point_in_pc_1'] for i in range(len(correspondences))]
 		S2 = [correspondences[i]['point_in_pc_2'] for i in range(len(correspondences))]
 
+		# Compute the center
 		p_center, q_center = np.mean(S1, axis=0), np.mean(S2, axis=0)
 
 		P = np.array(S1 - p_center)
@@ -36,23 +37,27 @@ class registration_iasd(registration):
 
 		A = Q.T @ P 
 
-		U, _, VT = svd(A) #Singular Value Decomposition
+		U, _, VT = svd(A) # Singular Value Decomposition
 		Rout = U @ np.diag([1,1,det(U @ VT)]) @ VT
 		tout = q_center - Rout @ p_center
 
 		return (Rout, tout)
 
 
-
-	# Try norm22; refactor
-	def __closest_neighbor(self, a: np.array(3)) -> np.array(3):
-		"""Computes the point in scan_2 that is closest to the 
-		point in scan_1.
-		:args: self and a 3-D point from scan_1
+	def __closest_neighbor(self, pt: np.array(3)) -> np.array(3):
+		"""Compute the point in scan_2 that is closest to a given 
+		point in scan_1. Private function of class registration_iasd
+		
+		:param pt: 3-D point from scan_1
+		:type pt: np.array
 		:return: closest 3-D point from scan_2
-		:rtype: numpy array
+		:rtype: np.array
 		"""
-		return self.scan_2[np.argmin(norm(np.array(a - self.scan_2), axis=1))]
+
+		# Create an array of all the distances from pt to all points in scan_2
+		#(L2-norm of the difference between them);
+		# Return the point whose distance corresponds to the minimum
+		return self.scan_2[np.argmin(norm(np.array(pt - self.scan_2), axis=1))]
 
 
 	def find_closest_points(self) -> dict:
@@ -65,9 +70,11 @@ class registration_iasd(registration):
 		:param search_alg: choose the searching option
 		:type search_alg: str, optional
 		:return: a dictionary with the correspondences. Keys are numbers identifying the id of the correspondence.
-				Values are a dictionaries with 'point_in_pc_1', 'point_in_pc_2' identifying the pair of points in the correspondence.
+				Values are a dictionaries with 'point_in_pc_1', 'point_in_pc_2' and 'dist2',
+				identifying the pair of points in the correspondence and their distance.
 		:rtype: dict
 		"""
+		# compute the correspondence for every point in scna_1
 		matches = [self.__closest_neighbor(a) for a in self.scan_1]
 
 		return {i: {'point_in_pc_1' : a, 'point_in_pc_2' : b, 'dist2': norm(a - b) } 
@@ -94,10 +101,11 @@ class point_cloud_data_iasd(point_cloud_data):
 
 		:param file: source file
 		:type file: str
-		:return: returns true or false, depending on whether the method
-		the ply was OK or not
+		:return: returns true or false, depending on whether the data in
+		the .ply file was corrupted or not
 		:rtype: bool
 		"""
+
 		coord = {'x': 0, 'y': 1, 'z': 2}
 		try:
 			with open(file) as fd:
@@ -111,16 +119,18 @@ class point_cloud_data_iasd(point_cloud_data):
 							break
 						else:
 							continue
-					elif (l[0], l[1]) == ('element', 'vertex'): #Check number of vertices
+					elif (l[0], l[1]) == ('element', 'vertex'): # Check number of vertices
 						n_pts = int(l[-1])
-					elif (l[0],l[1]) == ('property', 'float'): #Check available coordinates
+					elif (l[0],l[1]) == ('property', 'float'): # Check available coordinates
 						if l[2] in ('x', 'y', 'z'):
 							xyz.append(l[2])
-				if(len(xyz) != 3 or len(lines[st:]) < n_pts): #Not enough coordinates or wrong number of vertices
+				if(len(xyz) != 3 or len(lines[st:]) < n_pts): # Not enough coordinates or wrong number of vertices
 					raise ValueError("Wrong information")
+				# create the dictionary with all the points, with the coordinates in the order
+				#provided in the header
 				self.data = {i: np.array([l.split()[coord[c]] for c in xyz], dtype=float) for i, l in enumerate(lines[st:st+n_pts]) }
-		except Exception as e:
-			print(e)
+		except Exception as e: # If an exception is raised, then the file is not well-formatted
+			print("Error reading file: \n", e)
 			return False
 
 		return True
