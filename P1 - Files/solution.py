@@ -29,7 +29,7 @@ class registration_iasd(registration):
 		S1 = [correspondences[i]['point_in_pc_1'] for i in range(len(correspondences))]
 		S2 = [correspondences[i]['point_in_pc_2'] for i in range(len(correspondences))]
 
-		# Compute the center
+		# Compute the centers
 		p_center, q_center = np.mean(S1, axis=0), np.mean(S2, axis=0)
 
 		P = np.array(S1 - p_center)
@@ -61,7 +61,7 @@ class registration_iasd(registration):
 
 
 	def find_closest_points(self) -> dict:
-		"""Computes the closest points in the two scans.
+		"""Compute the closest points in the two scans.
 		There are many strategies. We are taking all the points in the first scan
 		and search for the closest in the second. This means that we can have > than 1 points in scan
 		1 corresponding to the same point in scan 2. All points in scan 1 will have correspondence.
@@ -74,7 +74,7 @@ class registration_iasd(registration):
 				identifying the pair of points in the correspondence and their distance.
 		:rtype: dict
 		"""
-		# compute the correspondence for every point in scna_1
+		# compute the correspondence for every point in scan_1
 		matches = [self.__closest_neighbor(a) for a in self.scan_1]
 
 		return {i: {'point_in_pc_1' : a, 'point_in_pc_2' : b, 'dist2': norm(a - b) } 
@@ -97,7 +97,7 @@ class point_cloud_data_iasd(point_cloud_data):
 			self,
 			file: str
 			) -> bool:
-		"""Loads a point cloud from a ply file
+		"""Load a point cloud from a ply file
 
 		:param file: source file
 		:type file: str
@@ -117,8 +117,6 @@ class point_cloud_data_iasd(point_cloud_data):
 					if len(l) == 1:
 						if l[0] == 'end_header':
 							break
-						else:
-							continue
 					elif (l[0], l[1]) == ('element', 'vertex'): # Check number of vertices
 						n_pts = int(l[-1])
 					elif (l[0],l[1]) == ('property', 'float'): # Check available coordinates
