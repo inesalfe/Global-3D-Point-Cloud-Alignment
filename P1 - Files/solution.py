@@ -36,7 +36,7 @@ class registration_iasd(registration):
 
 		A = Q.T @ P 
 
-		U, _, VT = svd(A)
+		U, _, VT = svd(A) #Singular Value Decomposition
 		Rout = U @ np.diag([1,1,det(U @ VT)]) @ VT
 		tout = q_center - Rout @ p_center
 
@@ -46,6 +46,12 @@ class registration_iasd(registration):
 
 	# Try norm22; refactor
 	def __closest_neighbor(self, a: np.array(3)) -> np.array(3):
+		"""Computes the point in scan_2 that is closest to the 
+		point in scan_1.
+		:args: self and a 3-D point from scan_1
+		:return: closest 3-D point from scan_2
+		:rtype: numpy array
+		"""
 		return self.scan_2[np.argmin(norm(np.array(a - self.scan_2), axis=1))]
 
 
@@ -105,9 +111,9 @@ class point_cloud_data_iasd(point_cloud_data):
 							break
 						else:
 							continue
-					elif (l[0], l[1]) == ('element', 'vertex'):
+					elif (l[0], l[1]) == ('element', 'vertex'): #Check number of vertices
 						n_pts = int(l[-1])
-					elif (l[0],l[1]) == ('property', 'float'):
+					elif (l[0],l[1]) == ('property', 'float'): #Check available coordinates
 						if l[2] in ('x', 'y', 'z'):
 							xyz.append(l[2])
 				if(len(xyz) != 3 or len(lines[st:]) < n_pts): #Not enough coordinates or wrong number of vertices
