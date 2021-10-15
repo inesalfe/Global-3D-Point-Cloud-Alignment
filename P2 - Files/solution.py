@@ -6,6 +6,7 @@ import search
 # you can use the class registration_iasd
 # from your solution.py (previous assignment)
 from solution import registration_iasd
+from solution import get_pointcloud
 
 # Choose what you think it is the best data structure
 # for representing actions.
@@ -73,9 +74,8 @@ class align_3d_search_problem(search.Problem):
 
 		pt_cloud = R @ self.scan_1
 
-		sum([np.min(norm(a - self.scan_2, axis=1))] for a in pt_cloud)
-		
-		pass
+		cost = sum([np.min(norm(a - self.scan_2, axis=1))] for a in pt_cloud)
+		return True if cost < 1e-3 else False
 
 	def path_cost(self, c, state1: State, action: Action, state2: State) -> float:
 
@@ -94,8 +94,8 @@ class align_3d_search_problem(search.Problem):
 		:rtype: float
 		"""
 		pass
-
-	def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bool, array, array, int]:
+	
+def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bool, array, array, int]:
 		
 		"""Function that returns the solution.
 		You can use any UN-INFORMED SEARCH strategy we study in the theoretical classes.
@@ -106,5 +106,19 @@ class align_3d_search_problem(search.Problem):
 			(numpy array with dimension (3,)); and 4) the depth of the obtained solution in the proposes search tree.
 		:rtype: Tuple[bool, array, array, int]
 		"""
+		node = breadth_first_graph_search(align_3d_search_problem(scan1,scan2))
+		if(node != None):
+			c_a = np.cos(node[0])
+			s_a = np.sin(node[0])
+			c_b = np.cos(node[1])
+			s_b = np.sin(node[1])
+			c_g = np.cos(node[2])
+			s_g = np.sin(node[2])
+
+			R = np.array([c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
+					 [s_a*c_b, s_a*s_b*s_g-c_a*c_g, s_a*s_b*c_g-c_a*s_g],
+					 [-s_b, c_b*s_g, c_b*c_g])
+			return (True, R, np.zeros(3), #depth)
+		else return (False, np.zeros([3,3]), np.zeros(3),#depth)
 
 		pass
