@@ -29,6 +29,9 @@ class align_3d_search_problem(search.Problem):
 		# You may want to change this to something representing # your initial state.
 		self.initial = Tuple(0, 0, 0, 1)
 		self.range = Tuple(np.pi, np.pi, np.pi/2)
+		self.scan_1 = scan1
+		self.scan_2 = scan2
+		self.tol = 1e-3
 		return
 
 	def actions(self, state: State) -> Tuple[Action, ...]:
@@ -39,8 +42,8 @@ class align_3d_search_problem(search.Problem):
 			:return: Tuple with all possible actions
 			:rtype: Tuple
 		"""
-
-		return ([(i, self.range[i]/2**State[3]), (i, -self.range[i]/2**State[3]) for i in range(3)])
+		p = 2**State[3]
+		return ([(i, self.range[i]/p) + (i, -self.range[i]/p) for i in range(3)])
 
 	def result(self, state: State, action: Action) -> State:
 		"""Returns the state that results from executing the given action in the given state. The action must be one of
@@ -57,7 +60,7 @@ class align_3d_search_problem(search.Problem):
 		result[action[0]] += action[1]
 		result[3] += 1
 
-		return tuple(result)
+		return Tuple(result)
 
 	def goal_test(self, state: State) -> bool:
 
@@ -68,14 +71,14 @@ class align_3d_search_problem(search.Problem):
 		c_g = np.cos(state[2])
 		s_g = np.sin(state[2])
 
-		R = np.array([c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
+		R = array([c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
 					 [s_a*c_b, s_a*s_b*s_g-c_a*c_g, s_a*s_b*c_g-c_a*s_g],
 					 [-s_b, c_b*s_g, c_b*c_g])
 
 		pt_cloud = R @ self.scan_1
 
-		cost = sum([np.min(norm(a - self.scan_2, axis=1))] for a in pt_cloud)
-		return True if cost < 1e-3 else False
+		error = sum([np.min(norm(a - self.scan_2, axis=1))] for a in pt_cloud)
+		return (cost <= self.tol)
 
 	def path_cost(self, c, state1: State, action: Action, state2: State) -> float:
 
@@ -93,7 +96,7 @@ class align_3d_search_problem(search.Problem):
 		:return: [description]
 		:rtype: float
 		"""
-		pass
+		return state2[3]
 	
 def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bool, array, array, int]:
 		
@@ -106,19 +109,18 @@ def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bo
 			(numpy array with dimension (3,)); and 4) the depth of the obtained solution in the proposes search tree.
 		:rtype: Tuple[bool, array, array, int]
 		"""
-		node = breadth_first_graph_search(align_3d_search_problem(scan1,scan2))
-		if(node != None):
-			c_a = np.cos(node[0])
-			s_a = np.sin(node[0])
-			c_b = np.cos(node[1])
-			s_b = np.sin(node[1])
-			c_g = np.cos(node[2])
-			s_g = np.sin(node[2])
+		sol_node = breadth_first_graph_search(align_3d_search_problem(scan1,scan2))
+		if(sol_node != None):
+			sol_state = sol_node.state
+			c_a = np.cos(sol_state[0])
+			s_a = np.sin(sol_state[0])
+			c_b = np.cos(sol_state[1])
+			s_b = np.sin(sol_state[1])
+			c_g = np.cos(sol_state[2])
+			s_g = np.sin(sol_state[2])
 
 			R = np.array([c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
-					 [s_a*c_b, s_a*s_b*s_g-c_a*c_g, s_a*s_b*c_g-c_a*s_g],
-					 [-s_b, c_b*s_g, c_b*c_g])
-			return (True, R, np.zeros(3), #depth)
-		else return (False, np.zeros([3,3]), np.zeros(3),#depth)
-
-		pass
+				     [s_a*c_b, s_a*s_b*s_g-c_a*c_g, s_a*s_b*c_g-c_a*s_g],
+				     [-s_b, c_b*s_g, c_b*c_g])
+			return (True, R, np.zeros(3), state[3])
+		else return (False, np.zeros([3,3]), np.zeros(3), 0)
