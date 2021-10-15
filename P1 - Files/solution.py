@@ -43,23 +43,6 @@ class registration_iasd(registration):
 
 		return (Rout, tout)
 
-
-	def __closest_neighbor(self, pt: np.array(3)) -> np.array(3):
-		"""Compute the point in scan_2 that is closest to a given 
-		point in scan_1. Private function of class registration_iasd
-		
-		:param pt: 3-D point from scan_1
-		:type pt: np.array
-		:return: closest 3-D point from scan_2
-		:rtype: np.array
-		"""
-
-		# Create an array of all the distances from pt to all points in scan_2
-		#(L2-norm of the difference between them);
-		# Return the point whose distance corresponds to the minimum
-		return self.scan_2[np.argmin(norm(np.array(pt - self.scan_2), axis=1))]
-
-
 	def find_closest_points(self) -> dict:
 		"""Compute the closest points in the two scans.
 		There are many strategies. We are taking all the points in the first scan
@@ -75,11 +58,9 @@ class registration_iasd(registration):
 		:rtype: dict
 		"""
 		# compute the correspondence for every point in scan_1
-		matches = [self.__closest_neighbor(a) for a in self.scan_1]
+		matches = [self.scan_2[np.argmin(norm(a - self.scan_2, axis=1))] for a in self.scan_1] 
 
-		return {i: {'point_in_pc_1' : a, 'point_in_pc_2' : b, 'dist2': norm(a - b) } 
-					for i,(a,b) in enumerate(zip(self.scan_1, matches))}
-				
+		return {i : {'point_in_pc_1' : self.scan_1[i], 'dist2' : norm(self.scan_1[i]-matches[i]), 'point_in_pc_2' : matches[i]} for i in range(len(matches))}		
 
 class point_cloud_data_iasd(point_cloud_data):
 

@@ -33,10 +33,10 @@ class align_3d_search_problem(search.Problem):
 	def actions(self, state: State) -> Tuple[Action, ...]:
 		"""Returns the actions that can be executed in the given state.
 		The result would be a list, since there are only four possible actions in any given state of the environment
-		    :param state: Abstract representation of your state
-		    :type state: State
-		    :return: Tuple with all possible actions
-		    :rtype: Tuple
+			:param state: Abstract representation of your state
+			:type state: State
+			:return: Tuple with all possible actions
+			:rtype: Tuple
 		"""
 
 		return ([(i, self.range[i]/2**State[3]), (i, -self.range[i]/2**State[3]) for i in range(3)])
@@ -50,7 +50,7 @@ class align_3d_search_problem(search.Problem):
 			:type action: [type]
 			:return: A new state
 			:rtype: State
-	    """
+		"""
 
 		result = list(state)
 		result[action[0]] += action[1]
@@ -64,8 +64,31 @@ class align_3d_search_problem(search.Problem):
 
 	def path_cost(self, c, state1: State, action: Action, state2: State) -> float:
 
+		"""Returns the cost of a solution path that arrives at state2 from state1 via action, assuming cost c to get up to state1. If the problem is such that the path doesn't matter, this function will only look at state2. If the path does matter, it will consider c and maybe state1
+		and action. The default method costs 1 for every step in the path.
+		
+		:param c: cost to get to the state1
+		:type c: [type]
+		:param state1: parent node
+		:type state1: State
+		:param action: action that changes the state from state1 to state2
+		:type action: Action
+		:param state2: state2
+		:type state2: State
+		:return: [description]
+		:rtype: float
+		"""
 		pass
 
 	def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bool, array, array, int]:
+		"""Function that returns the solution.
+		You can use any UN-INFORMED SEARCH strategy we study in the theoretical classes.
+		:param scan1: first scan of size (..., 3) :type scan1: array
+		:param scan2: second scan of size (..., 3) :type scan2: array
+		:return: outputs a tuple with: 1) true or false depending on
+			whether the method is able to get a solution; 2) rotation parameters (numpy array with dimension (3,3)); 3) translation parameters
+			(numpy array with dimension (3,)); and 4) the depth of the obtained solution in the proposes search tree.
+		:rtype: Tuple[bool, array, array, int]
+		"""
 
 		pass
