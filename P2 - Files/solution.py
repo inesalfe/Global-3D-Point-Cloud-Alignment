@@ -1,126 +1,115 @@
-from typing import Tuple
-from numpy import array
+from registration import registration
+from get_pointcloud import point_cloud_data
+
 import numpy as np
-import search
+from numpy.linalg import norm, svd, det
+from typing import Tuple
 
-# you can use the class registration_iasd
-# from your solution.py (previous assignment)
-from solution import registration_iasd
-from solution import get_pointcloud
 
-# Choose what you think it is the best data structure
-# for representing actions.
-Action = Tuple[int, float]
+class registration_iasd(registration):
 
-# Choose what you think it is the best data structure
-# for representing states.
-State = Tuple[float, float, float, int]
+	def __init__(self, scan_1: np.array((..., 3)), scan_2: np.array((..., 3))) -> None:
 
-class align_3d_search_problem(search.Problem):
+		# inherit all the methods and properties from registration
+		super().__init__(scan_1, scan_2)
 
-	def __init__(self, scan1: array((...,3)), scan2: array((...,3))) -> None:
-		"""Function that instantiate your class.
-		You CAN change the content of this __init__ if you want.
-		:param scan1: input point cloud from scan 1 :type scan1: np.array
-		:param scan2: input point cloud from scan 2 :type scan2: np.array
-		"""
-
-		# Creates an initial state.
-		# You may want to change this to something representing # your initial state.
-		self.initial = Tuple(0, 0, 0, 1)
-		self.range = Tuple(np.pi, np.pi, np.pi/2)
-		self.scan_1 = scan1
-		self.scan_2 = scan2
-		self.tol = 1e-3
 		return
 
-	def actions(self, state: State) -> Tuple[Action, ...]:
-		"""Returns the actions that can be executed in the given state.
-		The result would be a list, since there are only four possible actions in any given state of the environment
-			:param state: Abstract representation of your state
-			:type state: State
-			:return: Tuple with all possible actions
-			:rtype: Tuple
-		"""
-		p = 2**State[3]
-		return ([(i, self.range[i]/p) + (i, -self.range[i]/p) for i in range(3)])
 
-	def result(self, state: State, action: Action) -> State:
-		"""Returns the state that results from executing the given action in the given state. The action must be one of
-		self.actions(state).
-			:param state: Abstract representation of your state
-			:type state: [type]
-			:param action: An action
-			:type action: [type]
-			:return: A new state
-			:rtype: State
+	def compute_pose(self,correspondences: dict) -> Tuple[np.array, np.array]:
+		"""compute the transformation that aligns two
+		scans given a set of correspondences
+
+		:param correspondences: set of correspondences
+		:type correspondences: dict
+		:return: rotation and translation that align the correspondences
+		:rtype: Tuple[np.array, np.array]
 		"""
 
-		result = list(state)
-		result[action[0]] += action[1]
-		result[3] += 1
+		S1 = [correspondences[i]['point_in_pc_1'] for i in range(len(correspondences))]
+		S2 = [correspondences[i]['point_in_pc_2'] for i in range(len(correspondences))]
 
-		return Tuple(result)
+		# Compute the centers
+		p_center, q_center = np.mean(S1, axis=0), np.mean(S2, axis=0)
 
-	def goal_test(self, state: State) -> bool:
+		P = np.array(S1 - p_center)
+		Q = np.array(S2 - q_center)
 
-		c_a = np.cos(state[0])
-		s_a = np.sin(state[0])
-		c_b = np.cos(state[1])
-		s_b = np.sin(state[1])
-		c_g = np.cos(state[2])
-		s_g = np.sin(state[2])
+		A = Q.T @ P 
 
-		R = array([c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
-					 [s_a*c_b, s_a*s_b*s_g-c_a*c_g, s_a*s_b*c_g-c_a*s_g],
-					 [-s_b, c_b*s_g, c_b*c_g])
+		U, _, VT = svd(A) # Singular Value Decomposition
+		Rout = U @ np.diag([1,1,det(U @ VT)]) @ VT
+		tout = q_center - Rout @ p_center
 
-		pt_cloud = R @ self.scan_1
+		return (Rout, tout)
 
-		error = sum([np.min(norm(a - self.scan_2, axis=1))] for a in pt_cloud)
-		return (cost <= self.tol)
+	def find_closest_points(self) -> dict:
+		"""Compute the closest points in the two scans.
+		There are many strategies. We are taking all the points in the first scan
+		and search for the closest in the second. This means that we can have > than 1 points in scan
+		1 corresponding to the same point in scan 2. All points in scan 1 will have correspondence.
+		Points in scan 2 do not have necessarily a correspondence.
 
-	def path_cost(self, c, state1: State, action: Action, state2: State) -> float:
-
-		"""Returns the cost of a solution path that arrives at state2 from state1 via action, assuming cost c to get up to state1. If the problem is such that the path doesn't matter, this function will only look at state2. If the path does matter, it will consider c and maybe state1
-		and action. The default method costs 1 for every step in the path.
-		
-		:param c: cost to get to the state1
-		:type c: [type]
-		:param state1: parent node
-		:type state1: State
-		:param action: action that changes the state from state1 to state2
-		:type action: Action
-		:param state2: state2
-		:type state2: State
-		:return: [description]
-		:rtype: float
+		:param search_alg: choose the searching option
+		:type search_alg: str, optional
+		:return: a dictionary with the correspondences. Keys are numbers identifying the id of the correspondence.
+				Values are a dictionaries with 'point_in_pc_1', 'point_in_pc_2' and 'dist2',
+				identifying the pair of points in the correspondence and their distance.
+		:rtype: dict
 		"""
-		return state2[3]
-	
-def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bool, array, array, int]:
-		
-		"""Function that returns the solution.
-		You can use any UN-INFORMED SEARCH strategy we study in the theoretical classes.
-		:param scan1: first scan of size (..., 3) :type scan1: array
-		:param scan2: second scan of size (..., 3) :type scan2: array
-		:return: outputs a tuple with: 1) true or false depending on
-			whether the method is able to get a solution; 2) rotation parameters (numpy array with dimension (3,3)); 3) translation parameters
-			(numpy array with dimension (3,)); and 4) the depth of the obtained solution in the proposes search tree.
-		:rtype: Tuple[bool, array, array, int]
-		"""
-		sol_node = breadth_first_graph_search(align_3d_search_problem(scan1,scan2))
-		if(sol_node != None):
-			sol_state = sol_node.state
-			c_a = np.cos(sol_state[0])
-			s_a = np.sin(sol_state[0])
-			c_b = np.cos(sol_state[1])
-			s_b = np.sin(sol_state[1])
-			c_g = np.cos(sol_state[2])
-			s_g = np.sin(sol_state[2])
+		# compute the correspondence for every point in scan_1
+		matches = [self.scan_2[np.argmin(norm(a - self.scan_2, axis=1))] for a in self.scan_1] 
 
-			R = np.array([c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
-				     [s_a*c_b, s_a*s_b*s_g-c_a*c_g, s_a*s_b*c_g-c_a*s_g],
-				     [-s_b, c_b*s_g, c_b*c_g])
-			return (True, R, np.zeros(3), state[3])
-		else return (False, np.zeros([3,3]), np.zeros(3), 0)
+		return {i : {'point_in_pc_1' : self.scan_1[i], 'dist2' : norm(self.scan_1[i]-matches[i]), 'point_in_pc_2' : matches[i]} for i in range(len(matches))}		
+
+class point_cloud_data_iasd(point_cloud_data):
+
+	def __init__(
+			self,
+			fileName: str,
+			) -> None:
+			
+		super().__init__(fileName)
+
+		return
+
+
+	def load_point_cloud(
+			self,
+			file: str
+			) -> bool:
+		"""Load a point cloud from a ply file
+
+		:param file: source file
+		:type file: str
+		:return: returns true or false, depending on whether the data in
+		the .ply file was corrupted or not
+		:rtype: bool
+		"""
+
+		coord = {'x': 0, 'y': 1, 'z': 2}
+		try:
+			with open(file) as fd:
+				lines = fd.readlines()
+				st, n_pts, xyz = 0, 0, []
+				for line in lines:
+					st += 1
+					l = line.strip().split()
+					if len(l) == 1:
+						if l[0] == 'end_header':
+							break
+					elif (l[0], l[1]) == ('element', 'vertex'): # Check number of vertices
+						n_pts = int(l[-1])
+					elif (l[0],l[1]) == ('property', 'float'): # Check available coordinates
+						if l[2] in ('x', 'y', 'z'):
+							xyz.append(l[2])
+				if(len(xyz) != 3 or len(lines[st:]) < n_pts): # Not enough coordinates or wrong number of vertices
+					raise ValueError("Wrong information")
+				# create the dictionary with all the points, with the coordinates in the order
+				#provided in the header
+				self.data = {i: np.array([l.split()[coord[c]] for c in xyz], dtype=float) for i, l in enumerate(lines[st:st+n_pts]) }
+		except Exception as e: # If an exception is raised, then the file is not well-formatted
+			print("Error reading file: \n", e)
+			return False
+
+		return True
