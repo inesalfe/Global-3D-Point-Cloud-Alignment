@@ -60,6 +60,21 @@ class align_3d_search_problem(search.Problem):
 
 	def goal_test(self, state: State) -> bool:
 
+		c_a = np.cos(state[0])
+		s_a = np.sin(state[0])
+		c_b = np.cos(state[1])
+		s_b = np.sin(state[1])
+		c_g = np.cos(state[2])
+		s_g = np.sin(state[2])
+
+		R = np.array([c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
+					 [s_a*c_b, s_a*s_b*s_g-c_a*c_g, s_a*s_b*c_g-c_a*s_g],
+					 [-s_b, c_b*s_g, c_b*c_g])
+
+		pt_cloud = R @ self.scan_1
+
+		sum([np.min(norm(a - self.scan_2, axis=1))] for a in pt_cloud)
+		
 		pass
 
 	def path_cost(self, c, state1: State, action: Action, state2: State) -> float:
@@ -81,6 +96,7 @@ class align_3d_search_problem(search.Problem):
 		pass
 
 	def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bool, array, array, int]:
+		
 		"""Function that returns the solution.
 		You can use any UN-INFORMED SEARCH strategy we study in the theoretical classes.
 		:param scan1: first scan of size (..., 3) :type scan1: array
