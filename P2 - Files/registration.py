@@ -67,7 +67,7 @@ class registration:
         :return: the sum of the square error
         :rtype: float
         """
-        return sum(correspondence['dist2'] for correspondence in correspondences.values())
+        return sum(correspondence['dist2']**2 for correspondence in correspondences.values())
 
     def __update_pointclouds(
             self,
@@ -91,12 +91,21 @@ class registration:
 
         return
 
+    def get_compute(self) -> Tuple[np.array, np.array]: 
+        """wrapper function for __compute, with a fixed set of settings.
+        Students are not allowed to change this function.
 
-    def compute(
+        :return: the computed rotation and translation
+        :rtype: Tuple[np.array, np.array]
+        """
+        return self.__compute()
+
+
+    def __compute(
             self,
             vtk_visualization: point_clouds_visualization = None,
             vtk_pc1: str = 'empty',
-            max_iter: int = 100,
+            max_iter: int = 10,
             step_limit: float = 10**(-16),
             show_visualization: bool=False,
             verbose: bool = False
