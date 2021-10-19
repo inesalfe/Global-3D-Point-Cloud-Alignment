@@ -6,8 +6,11 @@ from visualization_vtk import point_clouds_visualization
 
 from sys import argv
 from math import sqrt, atan2
-from numpy import array, loadtxt, eye
+from numpy import array, loadtxt, eye, pi, sin, cos, mean, argmin
 from time import time
+
+from random import uniform, seed
+from numpy.linalg import norm
 
 def run(name_test: str) -> None:
 
@@ -20,6 +23,41 @@ def run(name_test: str) -> None:
     # (for visualization and registration purposes)
     np_point_cloud_1 = point_cloud_1.get_point_cloud(numpy_array=True)
     np_point_cloud_2 = point_cloud_2.get_point_cloud(numpy_array=True)
+
+    # np_point_cloud_1 = np_point_cloud_1 - mean(np_point_cloud_1)
+    # np_point_cloud_2 = np_point_cloud_2 - mean(np_point_cloud_2)
+
+    ######################## FOR TESTING ########################
+    ##### ROTATES THE FIRST POINT CLOUD BY A RANDOM AMMOUNT #####
+    # seed(1)
+    # # 1 - 3s, d5
+    # # 2 - 136s, d8
+    # # 3 - 5s, d5
+    # # 4 - 63s, d8
+    # # 5 - 62s, d7
+    # # 6 - 2s, d5
+    # # 7 - 98s, d8
+    # # 8 - 17s, d7
+    # # 9 - 4s, d5
+    # # 10 - 31s, d7
+    # # 11 - 34s, d7
+    # # 12 - 113s, d8
+
+    # a = uniform(-pi, pi)
+    # b = uniform(-pi, pi)
+    # g = uniform(-pi/2, pi/2)
+    # c_a = cos(a)
+    # s_a = sin(a)
+    # c_b = cos(b)
+    # s_b = sin(b)
+    # c_g = cos(g)
+    # s_g = sin(g)
+    # rot_mat = array([
+    #         [c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
+    #         [s_a*c_b, s_a*s_b*s_g+c_a*c_g, s_a*s_b*c_g-c_a*s_g],
+    #         [-s_b, c_b*s_g, c_b*c_g] ])
+    # np_point_cloud_1 = (rot_mat @ np_point_cloud_1.T).T
+    #############################################################
 
     # gets the center of the points, 2nd point cloud
     # for visualization purposes
@@ -59,10 +97,12 @@ def run(name_test: str) -> None:
         print('  -> rotation: ', r[0,:])
         print('               ', r[1,:])
         print('               ', r[2,:])
-        print('  -> time: ', elapsed)
+        print('  -> time: %.4f' % elapsed)
     else:
         print('INFO: no solution was found')
-        print('  -> time: ', elapsed)
+        print('  -> time: %.4f' % elapsed)
+
+    print("Registration Error: %.4g" % mean([min(norm(a - np_point_cloud_2, axis=1)) for a in (r @ np_point_cloud_1.T).T + t]))
 
     # transform the point cloud given the transformation
     # obtained from the proposes search strategy.

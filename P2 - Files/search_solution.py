@@ -1,8 +1,15 @@
+from math import ceil, floor
 from typing import Tuple
 from numpy import array
 from numpy.linalg import norm
 import numpy as np
 import search
+
+# Times: 
+# PUB1 - 0.43
+# PUB3 - 0.45
+# PUB4 - 7.7
+# PUB6 - 6.9
 
 # you can use the class registration_iasd
 # from your solution.py (previous assignment)
@@ -12,10 +19,30 @@ from solution import registration_iasd
 # for representing actions.
 Action = Tuple[int, float]
 
+class State_class:
+	st = ()
+	def __init__(self, t: Tuple[float, float, float, float, float, float]):
+		self.st = t
+
+	def __eq__(self, other):
+		ang_1 = (self.st[0] + self.st[1])/2
+		ang_2 = (self.st[2] + self.st[3])/2
+		ang_3 = (self.st[4] + self.st[5])/2
+		ang_1_in = (other.st[0] + other.st[1])/2
+		ang_2_in = (other.st[2] + other.st[3])/2
+		ang_3_in = (other.st[4] + other.st[5])/2
+		return ang_1 == ang_1_in and ang_2 == ang_2_in and ang_3 == ang_3_in
+	
+	def __hash__(self) -> int:
+		ang_1 = (self.st[0] + self.st[1])/2
+		ang_2 = (self.st[2] + self.st[3])/2
+		ang_3 = (self.st[4] + self.st[5])/2
+		return int(int(1000*ang_1) * 1000000) + int(int(1000*ang_2) * 1000) + int(1000*ang_3)
+
 # Choose what you think it is the best data structure
 # for representing states.
+# State = State_class
 State = Tuple[float, float, float, float, float, float]
-# State = Tuple[float, float, float, int]
 
 class align_3d_search_problem(search.Problem):
 
@@ -28,11 +55,13 @@ class align_3d_search_problem(search.Problem):
 
 		# Creates an initial state.
 		# You may want to change this to something representing # your initial state.
-		self.initial = (-np.pi, np.pi, -np.pi, np.pi, -np.pi/2, np.pi/2)
+		# self.initial = State(tuple([0, 360, 0, 360, 0, 180]))
+		self.initial = tuple([-np.pi, np.pi, -np.pi, np.pi, -np.pi/2, np.pi/2])
 		# self.initial = (0,0,0,1)
 		# self.range = (np.pi, np.pi, np.pi/2)
 		self.scan_1 = scan1
 		self.scan_2 = scan2
+		self.N = (scan1.shape)[0]
 		# MUDAR A TOLERÂNCIA AQUI
 		self.tol = 1e-2
 		return
@@ -48,7 +77,9 @@ class align_3d_search_problem(search.Problem):
 		# p = 2**state[3]
 		# return (tuple((i, self.range[i]/p) for i in range(3)) +
 		# 		 tuple((i, -self.range[i]/p) for i in range(3)) )
-		return (tuple((2*i, (state[2*i] + state[2*i+1])/2) for i in range(3)) +
+		# return (tuple((2*i, ceil((state.st[2*i] + state.st[2*i+1])/2)) for i in range(3)) +
+		# 		 tuple((2*i+1, floor((state.st[2*i] + state.st[2*i+1])/2)) for i in range(3)) )		
+		return ( tuple((2*i, (state[2*i] + state[2*i+1])/2) for i in range(3)) +
 				 tuple((2*i+1, (state[2*i] + state[2*i+1])/2) for i in range(3)) )
 
 	def result(self, state: State, action: Action) -> State:
@@ -61,14 +92,17 @@ class align_3d_search_problem(search.Problem):
 			:return: A new state
 			:rtype: State
 		"""
-
+		# result = list(state.st)
+		# result[action[0]] = action[1] 
+		# return State(tuple(result))
 		result = list(state)
 		result[action[0]] = action[1] 
-		# result[3] += 1
-
 		return tuple(result)
 
 	def goal_test(self, state: State) -> bool:
+		# a = (state.st[0] + state.st[1])/2
+		# b = (state.st[2] + state.st[3])/2
+		# g = (state.st[4] + state.st[5])/2			
 		a = (state[0] + state[1])/2
 		b = (state[2] + state[3])/2
 		g = (state[4] + state[5])/2		
@@ -82,16 +116,17 @@ class align_3d_search_problem(search.Problem):
 		c_g = np.cos(g)
 		s_g = np.sin(g)
 
-		R = array([[c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
-					 [s_a*c_b, s_a*s_b*s_g+c_a*c_g, s_a*s_b*c_g-c_a*s_g],
-					 [-s_b, c_b*s_g, c_b*c_g]])
+		R = array([ [c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
+				    [s_a*c_b, s_a*s_b*s_g+c_a*c_g, s_a*s_b*c_g-c_a*s_g],
+					[-s_b, c_b*s_g, c_b*c_g] ])
 
-		pt_cloud = (R @ self.scan_1.T).T
-
-		error = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in pt_cloud])
-		print(tuple([(state[2*i] + state[2*i+1])/2 * 180/np.pi for i in range(3)]), error)
+		error = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[0:int(0.1*self.N)] @ R.T])
+		if(error > self.tol):
+			return False
+		error = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[int(0.1*self.N):] @ R.T])
+		# print(tuple([(state[2*i] + state[2*i+1])/2 * 180/np.pi for i in range(3)]), error)
 		# print(tuple([state[i] * 180/np.pi for i in range(3)]), error)
-		return (error < self.tol)
+		return (error <= self.tol)
 
 	def path_cost(self, c, state1: State, action: Action, state2: State) -> float:
 
@@ -125,9 +160,12 @@ def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bo
 		sol_node = search.breadth_first_graph_search(align_3d_search_problem(scan1,scan2))
 		if(sol_node != None):
 			sol_state = sol_node.state
+			# a = (sol_state.st[0] + sol_state.st[1])/2
+			# b = (sol_state.st[2] + sol_state.st[3])/2
+			# g = (sol_state.st[4] + sol_state.st[5])/2
 			a = (sol_state[0] + sol_state[1])/2
 			b = (sol_state[2] + sol_state[3])/2
-			g = (sol_state[4] + sol_state[5])/2
+			g = (sol_state[4] + sol_state[5])/2	
 			# a = sol_state[0]
 			# b = sol_state[1]
 			# g = sol_state[2]
@@ -141,9 +179,11 @@ def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bo
 			R = array([[c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
 				     [s_a*c_b, s_a*s_b*s_g+c_a*c_g, s_a*s_b*c_g-c_a*s_g],
 				     [-s_b, c_b*s_g, c_b*c_g]])
-			print("Search solution:\n", R)
+			# print("Search solution:\n", R)
+			print("error after search: %.4g" % np.mean([min(norm(a - scan2, axis=1)) for a in (R @ scan1.T).T]))
 			reg = registration_iasd((R @ scan1.T).T, scan2)
 			# computes the registration
 			r, t = reg.get_compute()
+			# print("error after:", np.mean([min(norm(a - scan2, axis=1)) for a in (r@R @ scan1.T).T + t]))
 			return (True, r @ R, t, sol_node.depth)
 		return (False, np.zeros([3,3]), np.zeros(3), 0)
