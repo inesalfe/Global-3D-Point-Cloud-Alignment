@@ -166,6 +166,8 @@ def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bo
 			(numpy array with dimension (3,)); and 4) the depth of the obtained solution in the proposes search tree.
 		:rtype: Tuple[bool, array, array, int]
 		"""
+		scan1 -= np.mean(scan1, axis = 0)
+		scan2 -= np.mean(scan2, axis = 0)
 		sol_node = search.breadth_first_graph_search(align_3d_search_problem(scan1,scan2))
 		if(sol_node != None):
 			sol_state = sol_node.state
