@@ -29,23 +29,25 @@ def run(name_test: str) -> None:
 
     ######################## FOR TESTING ########################
     ##### ROTATES THE FIRST POINT CLOUD BY A RANDOM AMMOUNT #####
-    # seed(1)
-    # # 1 - 3s, d5
-    # # 2 - 136s, d8
-    # # 3 - 5s, d5
-    # # 4 - 63s, d8
-    # # 5 - 62s, d7
-    # # 6 - 2s, d5
-    # # 7 - 98s, d8
-    # # 8 - 17s, d7
-    # # 9 - 4s, d5
-    # # 10 - 31s, d7
-    # # 11 - 34s, d7
-    # # 12 - 113s, d8
+    # seed(12)
+    # No random - 0.15s, d4 - [-90.0, -67.5, -90.0]
+    # 1 - 3s, d5 ; 2.9s, d7 - [-157.5, -22.5, 135.0]
+    # 2 - 136s, d8 ; 0.75s, d6 - [-135.0, -67.5, -135.0]
+    # 3 - 5s, d5 ; 1.0s, d6 - [-67.5, 0.0, -112.5]
+    # 4 - 63s, d8 ; 0.35s, d5 - [-67.5, 0.0, 45.0]
+    # 5 - 62s, d7 ; 0.18s, d4 - [0.0, 0.0, -168.75]
+    # 6 - 2s, d5 ; 1.8s, d6 - [112.5, 0.0, -157.5]
+    # 7 - 98s, d8 ; 3.1s, d7 - [-157.5, 28.125, 0.0]
+    # 8 - 17s, d7 ; 1.1s, d6 - [-22.5, 0.0, 112.5]
+    # 9 - 4s, d5 ; 0.12s, d4 - [-112.5, -45.0, 0.0]
+    # 10 - 31s, d7 ; 1.3s, d6 - [157.5, -78.75, 0.0]
+    # 11 - 34s, d7 ; 0.3s, d5 - [-90.0, -45.0, -157.5]
+    # 12 - 113s, d8 ; 4.0s, d7 - [-45.0, -22.5, -157.5]
 
     # a = uniform(-pi, pi)
     # b = uniform(-pi, pi)
     # g = uniform(-pi/2, pi/2)
+    # # print('Initial Applied Rotation: [%.1f, %.1f, %.1f]' % (a * 180/pi, b * 180/pi, g * 180/pi))
     # c_a = cos(a)
     # s_a = sin(a)
     # c_b = cos(b)
@@ -102,6 +104,7 @@ def run(name_test: str) -> None:
         print('INFO: no solution was found')
         print('  -> time: %.4f' % elapsed)
 
+    # print('  -> time: %.4f' % elapsed)
     print("Registration Error: %.4g" % mean([min(norm(a - np_point_cloud_2, axis=1)) for a in (r @ np_point_cloud_1.T).T + t]))
 
     # transform the point cloud given the transformation
@@ -128,6 +131,7 @@ def main(arguments):
     # The load_solution function will load th1e data and
     # gt from the respective files.
     PROBLEMS = {
+        'PUB0': ('test_nr0'),
         'PUB1': ('test_nr1'),
         'PUB2': ('test_nr2'),
         'PUB3': ('test_nr3'),
@@ -139,7 +143,7 @@ def main(arguments):
     }
 
     if len(arguments) < 1:
-        test = 'PUB1'
+        test = 'PUB0'
     else:
         test = arguments[0]
 
