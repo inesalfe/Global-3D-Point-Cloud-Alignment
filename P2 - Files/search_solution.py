@@ -29,6 +29,7 @@ class State_class:
 		# State hashing only based on the angles
 		return hash(self.angles)
 
+
 # Choose what you think it is the best data structure
 # for representing states.
 State = State_class
@@ -41,22 +42,21 @@ class align_3d_search_problem(search.Problem):
 		:param scan1: input point cloud from scan 1 :type scan1: np.array
 		:param scan2: input point cloud from scan 2 :type scan2: np.array
 		"""
-		# Creates an initial state - no rotation and the ranges of the whole space
-		self.initial = State((0, 0, 0),(pi, pi/2, pi))
 		self.scan_1 = scan1
 		self.scan_2 = scan2
+		self.N = (scan1.shape)[0]
+		self.fS = max(15, int(self.N*0.05))
+		# Creates an initial state - no rotation and the ranges of the whole space
+		self.initial = State((0, 0, 0),(pi, pi/2, pi))
 		# Fraction of the points that will be used when computing the correspondences and error (goal_test)
-		self.f = max(int(0.05*((scan1.shape)[0])), 10)
-		# Tolerance values: 
-		# the first is the threshold below which we define a node to be "promissing";
-		# the second is the threshold below which a "promissing" node is deemed to be the solution, after 
-		# applying the refinement with the get_compute function (more on this in goal_test).
-		# If tolS is too high there will be more 'promissing' states that won't necessarily be a solution,
-		# so the get_compute function will be called more times, making the search slower; If this value is too
-		# low the criteria for a state to be deemed 'promissing' may be too strict and a solution may take more to be found.
-		# 1e-2 seems to do the trick
-		self.tolS = 1e-2
-		self.tolB = 1e-9
+		err = np.mean([np.min(norm(a - scan2, axis=1)) for a in scan1])
+		if err > 0.03:
+		    self.tolS = 4.2e-1
+		    self.fB = 12
+		else:
+		    self.tolS = 1e-2
+		    self.fB = int(1.3*self.fS)
+		self.tolB = 1e-8
 		return
 
 	def actions(self, state: State) -> Tuple[Action, ...]:
@@ -107,18 +107,15 @@ class align_3d_search_problem(search.Problem):
 		# The error is the mean distance from each point in the first point cloud to the closest point
 		# in the second point cloud. In order to make this process more efficient, we only compute the 
 		# mean for a fraction of the points in the first point cloud (10%)
-		err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[0:self.f] @ R.T])
-		if(err > self.tolS):
+		err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[0:self.fS] @ R.T])
+		if (err > self.tolS):
 			return False
-		# If the average error is smaller than a certain threashold, the state is deemed as 'promissing',
-		# so the get_compute function is called for the rotated point cloud, to check if we can get a solution
-		# from the current state by applying get_compute
-		reg = registration_iasd(self.scan_1 @ R.T, self.scan_2)
+		# return err <= self.tolS
+		# else:
+		reg = registration_iasd(self.scan_1[0:self.fB] @ R.T, self.scan_2)
 		r, t = reg.get_compute()
-		# Compute the error once again, now for all points in scan1 with the 2 rotations applied
-		err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1 @ R.T @ r.T + t])
-		# If it is smaller than or equal to the lower threshold then it is a solution
-		return err <= self.tolB
+		err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[0:self.fS] @ R.T @ r.T + t])
+		return (err <= self.tolB)
 
 
 	def path_cost(self, c, state1: State, action: Action, state2: State) -> float:
@@ -136,7 +133,6 @@ class align_3d_search_problem(search.Problem):
 		:return: [description]
 		:rtype: float
 		"""
-		# Not used
 		pass
 	
 def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bool, array, array, int]:
@@ -168,7 +164,7 @@ def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bo
 					  ])
 
 			# Apply the get_compute method to refine the solution from the search process
-			reg = registration_iasd(scan1 @ R.T, scan2)
+			reg = registration_iasd(scan1[0:max(15, int(scan1.shape[0]*0.08))] @ R.T, scan2)
 			r, t = reg.get_compute()
 			# return the final rotation (product of both rotations) and the final translation 
 			# (where we have to take into consideration) that both point clouds where centered at the beginning:
