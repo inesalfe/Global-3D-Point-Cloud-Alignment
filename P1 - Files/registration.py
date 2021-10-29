@@ -97,7 +97,7 @@ class registration:
             vtk_visualization: point_clouds_visualization = None,
             vtk_pc1: str = 'empty',
             max_iter: int = 100,
-            step_limit: float = 10**(-16),
+            step_limit: float = 10**(-14),
             show_visualization: bool=False,
             verbose: bool = False
             ) -> Tuple[np.array, np.array]: 

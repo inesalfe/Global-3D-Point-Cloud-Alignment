@@ -3,7 +3,7 @@ from visualization_vtk import point_clouds_visualization
 
 from sys import argv
 
-def run(name_test: str, number_iterations: int) -> None:
+def run(name_test: str, number_iterations: int = 20) -> None:
 
     # loads the point clouds
     dataset_path = name_test
@@ -66,7 +66,15 @@ def main(arguments):
         'PUB5': ('test_nr5', 10),
         'PUB6': ('test_nr6', 25),
         'PUB7': ('test_nr7', 20),
-        'PUB8': ('test_nr8', 20)
+        'PUB8': ('test_nr8', 20),
+        'PVT1': ('test_pvt1', 10),
+        'PVT2': ('test_pvt2', 20),
+        'PVT3': ('test_pvt3', 15),
+        'PVT4': ('test_pvt4', 30),
+        'PVT5': ('test_pvt5', 1),
+        'PVT6': ('test_pvt6', 1),
+        'PVT7': ('test_pvt7', 5),
+        'PVT8': ('test_pvt8', 15)
     }
 
     if len(arguments) < 1:

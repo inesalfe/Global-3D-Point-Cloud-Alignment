@@ -48,7 +48,6 @@ class align_3d_search_problem(search.Problem):
 		self.initial = State((0, 0, 0),(pi, pi/2, pi))
 		# Fraction of the points in cloud1 that will be used when computing the correspondences and error (at goal_test)
 		self.fS = max(15, int((scan1.shape)[0]*0.05))
-		self.fB = int(1.3*self.fS)
 		# fB is the number of points that is used in the get_compute function, in the refinement process (at goal_test)
 
 		# Tolerance values: 
@@ -62,20 +61,13 @@ class align_3d_search_problem(search.Problem):
 		# needed to be increased for such problems. The criterion used for this distinction is the starting error between the 2
 		# point clouds (that is, how far appart they are at the start). The value of this cretirion (0.03) was also fine-tuned
 		# through several (a lot) of submissions, aswell as the two thresholds
-		reg = registration_iasd(scan1, scan2)
-		r, t = reg.get_compute()
-		err = np.mean([np.min(norm(a - scan2, axis=1)) for a in scan1 @ r.T + t])
-		print(err)
-		if err < 1e-8:
-			self.tolS = 1
+		err = np.mean([np.min(norm(a - scan2, axis=1)) for a in scan1])
+		if err > 0.03:
+		    self.tolS = 4.2e-1
+		    self.fB = 12
 		else:
-			self.tolS = 2*err
-		# if err > 0.03:
-		#     self.tolS = 4.2e-1
-		#     self.fB = 12
-		# else:
-		#     self.tolS = 1e-2
-		#     self.fB = int(1.3*self.fS)
+		    self.tolS = 1e-2
+		    self.fB = int(1.3*self.fS)
 		self.tolB = 1e-8
 		return
 
@@ -180,8 +172,7 @@ def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bo
 					   [s[0]*c[1], s[0]*s[1]*s[2] + c[0]*c[2], s[0]*s[1]*c[2] - c[0]*s[2]],
 					   [-s[1], c[1]*s[2], c[1]*c[2]]
 					  ])
-			err = np.mean([np.min(norm(a - scan2, axis=1)) for a in scan1 @ R.T])
-			print("Search error:", err)
+
 			# Apply the get_compute method to refine the solution from the search process
 			reg = registration_iasd(scan1[0:max(15, int(scan1.shape[0]*0.08))] @ R.T, scan2)
 			r, t = reg.get_compute()
