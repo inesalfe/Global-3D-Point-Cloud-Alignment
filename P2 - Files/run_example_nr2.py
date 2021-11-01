@@ -1,6 +1,7 @@
 from typing import Tuple
 from solution import registration_iasd, point_cloud_data_iasd
-from search_solution import compute_alignment, align_3d_search_problem
+# from search_solution import compute_alignment, align_3d_search_problem
+from this_actually_works import compute_alignment, align_3d_search_problem
 
 from visualization_vtk import point_clouds_visualization
 

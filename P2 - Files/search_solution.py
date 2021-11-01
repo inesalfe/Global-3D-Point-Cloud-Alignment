@@ -137,9 +137,9 @@ class align_3d_search_problem(search.Problem):
 		# err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1 @ R.T])
 		# return err <= self.tolS
 		print("Here")
-		reg = registration_iasd(self.scan_1[0:10] @ R.T, self.scan_2)
+		reg = registration_iasd(self.scan_1[0:self.fS] @ R.T, self.scan_2)
 		r, t = reg.get_compute()
-		err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[0:10] @ R.T @ r.T + t])
+		err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[0:self.fS] @ R.T @ r.T + t])
 		return (err <= self.tolB)
 
 
