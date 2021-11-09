@@ -4,6 +4,8 @@ from numpy.linalg import norm
 import numpy as np
 import search
 
+from CountCalls import report
+
 # you can use the class registration_iasd
 # from your solution.py (previous assignment)
 from solution import registration_iasd
@@ -31,7 +33,7 @@ class State_class:
 		return hash(self.angles)
 	
 	def __lt__(self, other):
-		return self.err < other.err
+		return False
 
 
 # Choose what you think it is the best data structure
@@ -52,7 +54,7 @@ class align_3d_search_problem(search.Problem):
 		# fB is the number of points that is used in the get_compute function, in the refinement process (at goal_test)
 		self.fS = max(15, int((scan1.shape)[0]*0.05))
 		# Creates an initial state - no rotation and the ranges of the whole space
-		self.initial = State((0, 0, 0),(pi, pi/2, pi), np.mean([np.min(norm(a - scan2, axis=1)) for a in scan1[0:self.fS]]), np.eye(3))
+		self.initial = State((0, 0, 0),(pi, pi/2, pi), np.mean([np.min(norm(a - scan2, axis=1)) for a in scan1]), np.eye(3))
 		
 		# Tolerance values: 
 		# tolS is the threshold below which we define a state to be "promissing";
@@ -83,7 +85,9 @@ class align_3d_search_problem(search.Problem):
 			:rtype: Tuple
 		"""
 		# Branching factor of 6: for each one of the 3 angles move in both directions
-		return tuple((i, -1) for i in range(3)) + tuple((i, 1) for i in range(3))
+		t = tuple((i, -1) for i in range(3) if state.ranges[i] > 0.03) + tuple((i, 1) for i in range(3) if state.ranges[i] > 0.03)
+		# print(t)
+		return t
 
 	def result(self, state: State, action: Action) -> State:
 		"""Returns the state that results from executing the given action in the given state. The action must be one of
@@ -110,7 +114,7 @@ class align_3d_search_problem(search.Problem):
 		# The error is the mean distance from each point in the first point cloud to the closest point
 		# in the second point cloud. In order to make this process more efficient, we only compute the 
 		# mean for a fraction of the points in the first point cloud (10%)
-		err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[0:self.fS] @ R.T])
+		err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1 @ R.T])
 		return State_class(tuple(new_angles), tuple(new_ranges), err, R)
 
 
@@ -148,8 +152,8 @@ class align_3d_search_problem(search.Problem):
 		:return: [description]
 		:rtype: float
 		"""
-		pass
-	
+		return 0
+
 	def h(self, node) -> float:
 		return node.state.err
 	
@@ -171,6 +175,13 @@ def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bo
 		scan2 = scan2 - avg2
 		# Un-informed search using Graph Search with a BFS search strategy
 		problem = align_3d_search_problem(scan1,scan2)
+
+		def greedy_bfs(problem): return search.greedy_best_first_graph_search(problem, problem.h)
+
+		report([search.breadth_first_graph_search, search.astar_search], [problem])
+
+
+
 		sol_node = search.greedy_best_first_graph_search(problem, problem.h)
 		if(sol_node != None):
 			R = sol_node.state.R

@@ -1,17 +1,14 @@
 from typing import Tuple
 from solution import registration_iasd, point_cloud_data_iasd
 from search_solution import compute_alignment, align_3d_search_problem
-# from this_actually_works import compute_alignment, align_3d_search_problem
 
 from visualization_vtk import point_clouds_visualization
 
 from sys import argv
 from math import sqrt, atan2
-from numpy import array, loadtxt, eye, pi, sin, cos, mean, argmin
-from time import time
-
-from random import uniform, seed
+from numpy import array, loadtxt, eye, mean, min
 from numpy.linalg import norm
+from time import time
 
 def run(name_test: str) -> None:
 
@@ -24,43 +21,6 @@ def run(name_test: str) -> None:
     # (for visualization and registration purposes)
     np_point_cloud_1 = point_cloud_1.get_point_cloud(numpy_array=True)
     np_point_cloud_2 = point_cloud_2.get_point_cloud(numpy_array=True)
-
-    # np_point_cloud_1 = np_point_cloud_1 - mean(np_point_cloud_1)
-    # np_point_cloud_2 = np_point_cloud_2 - mean(np_point_cloud_2)
-
-    ######################## FOR TESTING ########################
-    ##### ROTATES THE FIRST POINT CLOUD BY A RANDOM AMMOUNT #####
-    # seed(12)
-    # No random - 0.15s, d4 - [-90.0, -67.5, -90.0]
-    # 1 - 3s, d5 ; 2.9s, d7 - [-157.5, -22.5, 135.0]
-    # 2 - 136s, d8 ; 0.75s, d6 - [-135.0, -67.5, -135.0]
-    # 3 - 5s, d5 ; 1.0s, d6 - [-67.5, 0.0, -112.5]
-    # 4 - 63s, d8 ; 0.35s, d5 - [-67.5, 0.0, 45.0]
-    # 5 - 62s, d7 ; 0.18s, d4 - [0.0, 0.0, -168.75]
-    # 6 - 2s, d5 ; 1.8s, d6 - [112.5, 0.0, -157.5]
-    # 7 - 98s, d8 ; 3.1s, d7 - [-157.5, 28.125, 0.0]
-    # 8 - 17s, d7 ; 1.1s, d6 - [-22.5, 0.0, 112.5]
-    # 9 - 4s, d5 ; 0.12s, d4 - [-112.5, -45.0, 0.0]
-    # 10 - 31s, d7 ; 1.3s, d6 - [157.5, -78.75, 0.0]
-    # 11 - 34s, d7 ; 0.3s, d5 - [-90.0, -45.0, -157.5]
-    # 12 - 113s, d8 ; 4.0s, d7 - [-45.0, -22.5, -157.5]
-
-    # a = uniform(-pi, pi)
-    # b = uniform(-pi, pi)
-    # g = uniform(-pi/2, pi/2)
-    # # print('Initial Applied Rotation: [%.1f, %.1f, %.1f]' % (a * 180/pi, b * 180/pi, g * 180/pi))
-    # c_a = cos(a)
-    # s_a = sin(a)
-    # c_b = cos(b)
-    # s_b = sin(b)
-    # c_g = cos(g)
-    # s_g = sin(g)
-    # rot_mat = array([
-    #         [c_a*c_b, c_a*s_b*s_g-s_a*c_g, c_a*s_b*c_g+s_a*s_g],
-    #         [s_a*c_b, s_a*s_b*s_g+c_a*c_g, s_a*s_b*c_g-c_a*s_g],
-    #         [-s_b, c_b*s_g, c_b*c_g] ])
-    # np_point_cloud_1 = (rot_mat @ np_point_cloud_1.T).T
-    #############################################################
 
     # gets the center of the points, 2nd point cloud
     # for visualization purposes
@@ -88,14 +48,9 @@ def run(name_test: str) -> None:
     _, _ = figure.make_point_cloud(np_point_cloud_2, point_weight=3, point_cloud_color=(0.1, 0.1, 0.9))
 
     # creates the registration object
-    avg_time = 0.0
-    for _ in range(1):
-        tic = time()
-        valid, r, t, d = compute_alignment(np_point_cloud_1, np_point_cloud_2)
-        elapsed = time()-tic
-        avg_time += elapsed
-    avg_time /= 1
-    # print('AVG TIME: %.4f' % avg_time)
+    tic = time()
+    valid, r, t, d = compute_alignment(np_point_cloud_1, np_point_cloud_2)
+    elapsed = time()-tic
 
     if valid:
         print('INFO: solver found a solution.')
@@ -105,27 +60,27 @@ def run(name_test: str) -> None:
         print('  -> rotation: ', r[0,:])
         print('               ', r[1,:])
         print('               ', r[2,:])
-        print('  -> time: %.4f' % avg_time)
+        print('  -> time: %.4f' % elapsed)
     else:
         print('INFO: no solution was found')
-        print('  -> time: %.4f' % elapsed)
+        print('  -> time: ', elapsed)
 
-    # print(name_test, '-> time: %.4f' % elapsed)
     print("Registration Error: %.4g" % mean([min(norm(a - np_point_cloud_2, axis=1)) for a in (r @ np_point_cloud_1.T).T + t]))
+
 
     # transform the point cloud given the transformation
     # obtained from the proposes search strategy.
-    # T = eye(4)
-    # T[0:3,0:3], T[0:3, 3] = r, t
-    # figure.transform_pointcloud(id_pc1,T)
+    T = eye(4)
+    T[0:3,0:3], T[0:3, 3] = r, t
+    figure.transform_pointcloud(id_pc1,T)
 
-    # # renders the final result.
-    # print(' ')
-    # print('INFO: Green and blue points represent the original point-clouds.')
-    # print('INFO: Red pints represent the application of the computed (r,t) to the green point-cloud.')
-    # print('INFO: As in the previous assignment, the red points must be aligned with the blue ones.')
-    # print('INFO: Close the window!')
-    # figure.render(block=True)
+    # renders the final result.
+    print(' ')
+    print('INFO: Green and blue points represent the original point-clouds.')
+    print('INFO: Red pints represent the application of the computed (r,t) to the green point-cloud.')
+    print('INFO: As in the previous assignment, the red points must be aligned with the blue ones.')
+    print('INFO: Close the window!')
+    figure.render(block=True)
 
     return
     
@@ -137,7 +92,6 @@ def main(arguments):
     # The load_solution function will load th1e data and
     # gt from the respective files.
     PROBLEMS = {
-        'PUB0': ('test_nr0'),
         'PUB1': ('test_nr1'),
         'PUB2': ('test_nr2'),
         'PUB3': ('test_nr3'),
@@ -157,13 +111,11 @@ def main(arguments):
     }
 
     if len(arguments) < 1:
-        test = 'PUB0'
+        test = 'PUB1'
     else:
         test = arguments[0]
 
     run(PROBLEMS[test])
-    # for pb in PROBLEMS.values():
-    #     run(pb)
 
 if __name__=="__main__":
     main(argv[1:])

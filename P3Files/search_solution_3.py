@@ -29,6 +29,9 @@ class State_class:
 		# State hashing only based on the angles
 		return hash(self.angles)
 
+	def __lt__(self, other):
+		return self.err < other.err
+
 
 # Choose what you think it is the best data structure
 # for representing states.
@@ -48,7 +51,7 @@ class align_3d_search_problem(search.Problem):
 		self.initial = State((0, 0, 0),(pi, pi/2, pi))
 		# Fraction of the points in cloud1 that will be used when computing the correspondences and error (at goal_test)
 		self.fS = max(15, int((scan1.shape)[0]*0.05))
-		# self.fB = 20
+		# self.fB = int(1.3*self.fS)
 		# fB is the number of points that is used in the get_compute function, in the refinement process (at goal_test)
 
 		# Tolerance values: 
@@ -62,25 +65,23 @@ class align_3d_search_problem(search.Problem):
 		# needed to be increased for such problems. The criterion used for this distinction is the starting error between the 2
 		# point clouds (that is, how far appart they are at the start). The value of this cretirion (0.03) was also fine-tuned
 		# through several (a lot) of submissions, aswell as the two thresholds
-		# avg_dist = np.average([norm(a) for a in scan1])
-		# print(avg_dist)
-		# self.tolS = 0.15
-		# self.tolS = 0.2 * avg_dist
+		avg_dist = np.average([norm(a) for a in scan1])
+		self.tolS = 1.3e-2 * avg_dist / 6.65e-2 #1.3e-2, 6.65e-2
 		# print(avg_dist)
 		# reg = registration_iasd(scan1, scan2)
 		# r, t = reg.get_compute()
-		err = np.mean([np.min(norm(a - scan2, axis=1)) for a in scan1])
+		# err = np.mean([np.min(norm(a - scan2, axis=1)) for a in scan1 @ r.T + t])
 		# print(err)
 		# if err < 1e-8:
-		# # 	self.tolS = 1
-		# # else:
-		# # 	self.tolS = 2*err
-		if err > 0.03:
-		    self.tolS = 4.2e-1
-		    self.fB = 12
-		else:
-		    self.tolS = 1e-2
-		    self.fB = int(1.3*self.fS)
+		# 	self.tolS = 1
+		# else:
+		# 	self.tolS = 2*err
+		# if err > 0.03:
+		#     self.tolS = 4.2e-1
+		#     self.fB = 12
+		# else:
+		#     self.tolS = 1e-2
+		#     self.fB = int(1.3*self.fS)
 		self.tolB = 1e-8
 		return
 
@@ -93,8 +94,7 @@ class align_3d_search_problem(search.Problem):
 			:rtype: Tuple
 		"""
 		# Branching factor of 6: for each one of the 3 angles move in both directions
-		act = tuple((i, -1) for i in range(3) if state.ranges[i] >= 10/180*pi) + tuple((i, 1) for i in range(3) if state.ranges[i] >= 10/180*pi)
-		return act
+		return tuple((i, -1) for i in range(3)) + tuple((i, 1) for i in range(3))
 
 	def result(self, state: State, action: Action) -> State:
 		"""Returns the state that results from executing the given action in the given state. The action must be one of
@@ -139,10 +139,10 @@ class align_3d_search_problem(search.Problem):
 		# return err <= self.tolS
 		# err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1 @ R.T])
 		# return err <= self.tolS
-		# print("Here")
-		reg = registration_iasd(self.scan_1[0:self.fB] @ R.T, self.scan_2)
+		#print("Here")
+		reg = registration_iasd(self.scan_1[0:self.fS] @ R.T, self.scan_2)
 		r, t = reg.get_compute()
-		err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[0:self.fB] @ R.T @ r.T + t])
+		err = np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[0:self.fS] @ R.T @ r.T + t])
 		return (err <= self.tolB)
 
 
@@ -162,6 +162,15 @@ class align_3d_search_problem(search.Problem):
 		:rtype: float
 		"""
 		pass
+	def h(self, node):
+		angles = node.state.angles
+		c = np.cos(angles)
+		s = np.sin(angles)
+		R = array([[c[0]*c[1], c[0]*s[1]*s[2] - s[0]*c[2], c[0]*s[1]*c[2] + s[0]*s[2]],
+				   [s[0]*c[1], s[0]*s[1]*s[2] + c[0]*c[2], s[0]*s[1]*c[2] - c[0]*s[2]],
+				   [-s[1], c[1]*s[2], c[1]*c[2]]
+				  ])
+		return np.mean([np.min(norm(a - self.scan_2, axis=1)) for a in self.scan_1[0:self.fS] @ R.T])
 	
 def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bool, array, array, int]:
 		
@@ -179,12 +188,9 @@ def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bo
 		avg2 = np.average(scan2, axis=0)
 		scan1 = scan1 - avg1
 		scan2 = scan2 - avg2
-		# print(scan1.min(), scan1.max())
-		# m_scan = np.max([-scan1.min(), scan1.max(), -scan2.min(), scan2.max()])
-		# scan1 /= m_scan
-		# scan2 /= m_scan
 		# Un-informed search using Graph Search with a BFS search strategy
-		sol_node = search.breadth_first_graph_search(align_3d_search_problem(scan1,scan2))
+		problem = align_3d_search_problem(scan1,scan2)
+		sol_node = search.breadth_first_graph_search(problem)
 		if(sol_node != None):
 			angles = sol_node.state.angles
 			# Computes the solution Rotation from the goal state's angles
@@ -194,8 +200,8 @@ def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bo
 					   [s[0]*c[1], s[0]*s[1]*s[2] + c[0]*c[2], s[0]*s[1]*c[2] - c[0]*s[2]],
 					   [-s[1], c[1]*s[2], c[1]*c[2]]
 					  ])
-			# err = np.mean([np.min(norm(a - scan2, axis=1)) for a in scan1 @ R.T])
-			# print("Search error:", err)
+			err = np.mean([np.min(norm(a - scan2, axis=1)) for a in scan1 @ R.T])
+			print("Search error:", err)
 			# Apply the get_compute method to refine the solution from the search process
 			reg = registration_iasd(scan1 @ R.T, scan2)
 			r, t = reg.get_compute()
@@ -205,3 +211,4 @@ def compute_alignment(scan1: array((...,3)), scan2: array((...,3)),) -> Tuple[bo
 			# where R is the final rotation and t' = (t + avg2 - R @ avg1) the final translation )
 			return (True, r @ R, t - r @ R @ avg1 + avg2, sol_node.depth)
 		return (False, np.zeros([3,3]), np.zeros(3), 0)
+
