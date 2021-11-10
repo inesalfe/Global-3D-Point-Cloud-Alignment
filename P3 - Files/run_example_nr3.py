@@ -48,9 +48,18 @@ def run(name_test: str) -> None:
     _, _ = figure.make_point_cloud(np_point_cloud_2, point_weight=3, point_cloud_color=(0.1, 0.1, 0.9))
 
     # creates the registration object
-    tic = time()
-    valid, r, t, d = compute_alignment(np_point_cloud_1, np_point_cloud_2)
-    elapsed = time()-tic
+    # tic = time()
+    # valid, r, t, d = compute_alignment(np_point_cloud_1, np_point_cloud_2)
+    # elapsed = time()-tic
+    avg_time = 0.0
+    valid, r, t, d = False, None, None, 0 
+    it = 5
+    for _ in range(it):
+        tic = time()
+        valid, r, t, d = compute_alignment(np_point_cloud_1, np_point_cloud_2)
+        elapsed = time()-tic
+        avg_time += elapsed
+    avg_time /= it
 
     if valid:
         print('INFO: solver found a solution.')
@@ -72,15 +81,15 @@ def run(name_test: str) -> None:
     # obtained from the proposes search strategy.
     T = eye(4)
     T[0:3,0:3], T[0:3, 3] = r, t
-    figure.transform_pointcloud(id_pc1,T)
+    # figure.transform_pointcloud(id_pc1,T)
 
     # renders the final result.
-    print(' ')
-    print('INFO: Green and blue points represent the original point-clouds.')
-    print('INFO: Red pints represent the application of the computed (r,t) to the green point-cloud.')
-    print('INFO: As in the previous assignment, the red points must be aligned with the blue ones.')
-    print('INFO: Close the window!')
-    figure.render(block=True)
+    # print(' ')
+    # print('INFO: Green and blue points represent the original point-clouds.')
+    # print('INFO: Red pints represent the application of the computed (r,t) to the green point-cloud.')
+    # print('INFO: As in the previous assignment, the red points must be aligned with the blue ones.')
+    # print('INFO: Close the window!')
+    # figure.render(block=True)
 
     return
     
